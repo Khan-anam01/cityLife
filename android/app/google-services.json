@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "696843188309",
+    "project_id": "citylife-57fd4",
+    "storage_bucket": "citylife-57fd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:696843188309:android:68fb7d0d0db1795f61bcdc",
+        "android_client_info": {
+          "package_name": "com.citylife.citylife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYytRu8E483ahuRlwLZj2weUeOOro6S7Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
