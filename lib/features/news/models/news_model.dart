@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class NewsModel {
   final String id;
   final String title;
@@ -31,6 +33,7 @@ class NewsModel {
     required this.updatedAt,
   });
 
+  // ── Time Ago Display ─────────────────────────────────────
   String get timeAgo {
     final date = publishedAt ?? createdAt;
     final diff = DateTime.now().difference(date);
@@ -40,31 +43,33 @@ class NewsModel {
     return '${(diff.inDays / 7).floor()}w ago';
   }
 
+  // ── Category Emoji ───────────────────────────────────────
   String get categoryEmoji {
-    switch (category) {
-      case 'Transport':
+    switch (category?.toLowerCase()) {
+      case 'transport':
         return '🚌';
-      case 'Health':
+      case 'health':
         return '🏥';
-      case 'Education':
+      case 'education':
         return '🎓';
-      case 'Technology':
+      case 'technology':
         return '💻';
-      case 'Business':
+      case 'business':
         return '💼';
-      case 'Environment':
+      case 'environment':
         return '🌿';
-      case 'Security':
+      case 'security':
         return '🛡️';
-      case 'Sports':
+      case 'sports':
         return '🏃';
-      case 'Politics':
+      case 'politics':
         return '🏛️';
       default:
         return '📰';
     }
   }
 
+  // ── SQLite Support (Existing) ────────────────────────────
   factory NewsModel.fromMap(Map<String, dynamic> map) {
     return NewsModel(
       id: map['id'] as String,
@@ -74,9 +79,12 @@ class NewsModel {
       imageUrl: map['image_url'] as String?,
       author: map['author'] as String?,
       category: map['category'] as String?,
-      tags:
-          (map['tags'] as String?)?.split(',').map((t) => t.trim()).toList() ??
-              [],
+      tags: (map['tags'] as String?)
+              ?.split(',')
+              .map((t) => t.trim())
+              .where((t) => t.isNotEmpty)
+              .toList() ??
+          [],
       views: map['views'] as int? ?? 0,
       likes: map['likes'] as int? ?? 0,
       isPublished: (map['is_published'] as int? ?? 1) == 1,
@@ -104,4 +112,80 @@ class NewsModel {
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
+
+  // ── Firestore Support ────────────────────────────────────
+  factory NewsModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
+    return NewsModel(
+      id: doc.id,
+      title: data['title'] as String? ?? '',
+      body: data['body'] as String? ?? '',
+      summary: data['summary'] as String?,
+      imageUrl: data['image_url'] as String?,
+      author: data['author'] as String?,
+      category: data['category'] as String?,
+      tags: List<String>.from(data['tags'] ?? []),
+      views: data['views'] as int? ?? 0,
+      likes: data['likes'] as int? ?? 0,
+      isPublished: data['is_published'] as bool? ?? true,
+      publishedAt: (data['published_at'] as Timestamp?)?.toDate(),
+      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'body': body,
+      'summary': summary,
+      'image_url': imageUrl,
+      'author': author,
+      'category': category,
+      'tags': tags,
+      'views': views,
+      'likes': likes,
+      'is_published': isPublished,
+      'published_at':
+          publishedAt != null ? Timestamp.fromDate(publishedAt!) : null,
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  // ── CopyWith for easy updates ────────────────────────────
+  NewsModel copyWith({
+    String? id,
+    String? title,
+    String? body,
+    String? summary,
+    String? imageUrl,
+    String? author,
+    String? category,
+    List<String>? tags,
+    int? views,
+    int? likes,
+    bool? isPublished,
+    DateTime? publishedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return NewsModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      summary: summary ?? this.summary,
+      imageUrl: imageUrl ?? this.imageUrl,
+      author: author ?? this.author,
+      category: category ?? this.category,
+      tags: tags ?? this.tags,
+      views: views ?? this.views,
+      likes: likes ?? this.likes,
+      isPublished: isPublished ?? this.isPublished,
+      publishedAt: publishedAt ?? this.publishedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

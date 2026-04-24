@@ -22,9 +22,10 @@ dependencies:
   path: ^1.9.0                # Path utilities for DB
 
   # ── Firebase (Auth + Firestore for real-time) ────
-  firebase_core: ^3.3.0
+  firebase_core: ^3.15.2
   firebase_auth: ^5.1.4
-  cloud_firestore: ^5.2.1
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.3.0  
   google_sign_in: ^6.2.1
 
   # ── Maps ─────────────────────────────────────────

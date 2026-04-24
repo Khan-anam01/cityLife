@@ -27,6 +27,7 @@ import '../../features/news/screens/news_screen.dart';
 import '../../features/news/screens/news_detail_screen.dart';
 import '../../features/news/models/news_model.dart';
 import '../../shared/widgets/cl_bottom_nav.dart';
+import '../../seed_data_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -69,7 +70,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/news/:id',
           builder: (_, s) => NewsDetailScreen(article: s.extra as NewsModel)),
-
+      GoRoute(
+        path: '/seed',
+        builder: (_, __) => const SeedDataScreen(),
+      ),
       // ── User profile (tap avatar on feed) ─────────
       GoRoute(
         path: '/user/:id',

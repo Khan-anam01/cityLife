@@ -75,7 +75,7 @@ class FeaturedEventsSection extends StatelessWidget {
             children: [
               Text('Upcoming Events', style: AppTypography.headlineSmall),
               GestureDetector(
-                onTap: () => context.go(AppRoutes.explore),
+                onTap: () => context.go(AppRoutes.nearby),
                 child: Text(
                   'See all',
                   style: AppTypography.labelMedium.copyWith(

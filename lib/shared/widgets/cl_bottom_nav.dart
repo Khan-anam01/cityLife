@@ -321,11 +321,11 @@ class AppDrawer extends ConsumerWidget {
                     },
                   ),
                   _DrawerItem(
-                    icon: Icons.report_problem_outlined,
-                    label: 'My Reports',
+                    icon: Icons.cloud_upload_rounded,
+                    label: 'Seed Demo Data',
                     onTap: () {
                       Navigator.pop(context);
-                      context.push('/my-reports');
+                      context.push('/seed'); // This will open SeedDataScreen
                     },
                   ),
                   _DrawerItem(
