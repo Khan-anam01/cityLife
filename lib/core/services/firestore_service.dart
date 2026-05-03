@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../database/database_helper.dart'; // Optional: for local sync
 import '../../features/news/models/news_model.dart';
 import '../../features/events/models/event_model.dart';
+import '../../features/jobs/models/job_model.dart';
 import '../../shared/models/user_model.dart';
 
 class FirestoreService {
@@ -11,6 +11,7 @@ class FirestoreService {
   CollectionReference get newsCollection => _db.collection('news');
   CollectionReference get eventsCollection => _db.collection('events');
   CollectionReference get usersCollection => _db.collection('users');
+  CollectionReference get jobsCollection => _db.collection('jobs');
 
   // ── Users ──────────────────────────────────────────────
 
@@ -69,6 +70,23 @@ class FirestoreService {
       batch.set(docRef, event.toFirestore());
     }
     await batch.commit();
+  }
+
+  // ── Jobs ───────────────────────────────────────────────
+
+  Future<void> addJob(JobModel job) async {
+    await jobsCollection.doc(job.id).set(job.toFirestore());
+  }
+
+  Future<void> updateJob(JobModel job) async {
+    await jobsCollection.doc(job.id).update({
+      ...job.toFirestore(),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteJob(String jobId) async {
+    await jobsCollection.doc(jobId).delete();
   }
 
   // Real-time listeners (for screens)

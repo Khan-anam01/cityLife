@@ -87,7 +87,11 @@ class QuickActionsGrid extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Quick Access', style: AppTypography.headlineSmall),
+          Text('Quick Access',
+              style: AppTypography.headlineSmall.copyWith(
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              )),
           const SizedBox(height: AppSpacing.md),
           GridView.builder(
             shrinkWrap: true,

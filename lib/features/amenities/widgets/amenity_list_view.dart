@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../models/amenity_model.dart';
 import '../providers/amenities_provider.dart';
 import 'amenity_card.dart';
 

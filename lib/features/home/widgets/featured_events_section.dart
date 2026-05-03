@@ -60,6 +60,7 @@ class FeaturedEventsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -73,7 +74,12 @@ class FeaturedEventsSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Upcoming Events', style: AppTypography.headlineSmall),
+              Text('Upcoming Events',
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  )),
               GestureDetector(
                 onTap: () => context.go(AppRoutes.nearby),
                 child: Text(
@@ -155,7 +161,11 @@ class _EventCard extends StatelessWidget {
             // Title
             Text(
               event.title,
-              style: AppTypography.headlineSmall.copyWith(fontSize: 14),
+              style: AppTypography.headlineSmall.copyWith(
+                fontSize: 14,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -173,7 +183,11 @@ class _EventCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     event.venue,
-                    style: AppTypography.caption,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

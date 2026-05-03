@@ -98,6 +98,7 @@ class _AmenityMapViewState extends ConsumerState<AmenityMapView> {
               target: _center,
               zoom: 13,
             ),
+            cloudMapId: "d9b24a12aac2fec4d7a87909",
             markers: _buildMarkers(amenities),
             onMapCreated: (controller) {
               _mapController = controller;

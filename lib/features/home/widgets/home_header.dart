@@ -108,7 +108,11 @@ class HomeHeader extends ConsumerWidget {
                   user?.firstName.isNotEmpty == true
                       ? user!.firstName
                       : 'Welcome',
-                  style: AppTypography.headlineMedium,
+                  style: AppTypography.headlineMedium.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

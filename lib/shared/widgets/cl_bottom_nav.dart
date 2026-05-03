@@ -25,47 +25,85 @@ class _NavItem {
 // ══════════════════════════════════════════════════════
 // MAIN SHELL
 // ══════════════════════════════════════════════════════
-class MainShell extends ConsumerWidget {
+class MainShell extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainShell({super.key, required this.navigationShell});
 
   static const List<_NavItem> _items = [
     _NavItem(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-    ),
+        label: 'Home',
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded),
     _NavItem(
-      label: 'Explore',
-      icon: Icons.map_outlined,
-      activeIcon: Icons.map_rounded,
-    ),
+        label: 'Explore',
+        icon: Icons.map_outlined,
+        activeIcon: Icons.map_rounded),
     _NavItem(
-      label: 'Community',
-      icon: Icons.people_outline_rounded,
-      activeIcon: Icons.people_rounded,
-    ),
+        label: 'Community',
+        icon: Icons.people_outline_rounded,
+        activeIcon: Icons.people_rounded),
     _NavItem(
-      label: 'Jobs',
-      icon: Icons.work_outline_rounded,
-      activeIcon: Icons.work_rounded,
-    ),
+        label: 'Jobs',
+        icon: Icons.work_outline_rounded,
+        activeIcon: Icons.work_rounded),
     _NavItem(
-      label: 'Events',
-      icon: Icons.event_outlined,
-      activeIcon: Icons.event_rounded,
-    ),
+        label: 'Events',
+        icon: Icons.event_outlined,
+        activeIcon: Icons.event_rounded),
   ];
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  // Track horizontal drag to detect intentional swipes
+  double _dragStartX = 0;
+  static const double _swipeThreshold = 80.0; // min px to count as a swipe
+
+  void _goTo(int index) {
+    if (index < 0 || index >= MainShell._items.length) return;
+    widget.navigationShell.goBranch(
+      index,
+      initialLocation: index == widget.navigationShell.currentIndex,
+    );
+  }
+
+  void _onNavTap(int index) => _goTo(index);
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentIndex = navigationShell.currentIndex;
+    final currentIndex = widget.navigationShell.currentIndex;
+
+    // Community tab (index 2) has its own horizontal TabBar —
+    // disable swipe there to avoid gesture conflicts.
+    final swipeEnabled = currentIndex != 2;
 
     return Scaffold(
-      key: scaffoldKey, // ← attach the global key here
+      key: scaffoldKey,
       drawer: const AppDrawer(),
-      body: navigationShell,
+      body: GestureDetector(
+        onHorizontalDragStart:
+            swipeEnabled ? (d) => _dragStartX = d.globalPosition.dx : null,
+        onHorizontalDragEnd: swipeEnabled
+            ? (d) {
+                final delta = d.globalPosition.dx - _dragStartX;
+                if (delta.abs() < _swipeThreshold) return;
+                if (delta < 0) {
+                  // Swipe left → next tab
+                  _goTo(currentIndex + 1);
+                } else {
+                  // Swipe right → previous tab
+                  _goTo(currentIndex - 1);
+                }
+              }
+            : null,
+        // Pass all other gestures through to children
+        behavior: HitTestBehavior.translucent,
+        child: widget.navigationShell,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkSurface : AppColors.white,
@@ -87,15 +125,12 @@ class MainShell extends ConsumerWidget {
           child: SizedBox(
             height: AppSpacing.bottomNavHeight,
             child: Row(
-              children: List.generate(_items.length, (index) {
-                final item = _items[index];
+              children: List.generate(MainShell._items.length, (index) {
+                final item = MainShell._items[index];
                 final isSelected = currentIndex == index;
                 return Expanded(
                   child: GestureDetector(
-                    onTap: () => navigationShell.goBranch(
-                      index,
-                      initialLocation: index == currentIndex,
-                    ),
+                    onTap: () => _onNavTap(index),
                     behavior: HitTestBehavior.opaque,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../core/database/database_helper.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../shared/models/user_model.dart';
 import '../models/job_model.dart';
 
@@ -73,12 +74,15 @@ class JobsRepository {
         'Please upgrade your account to a Business account.',
       );
     }
+    // ── 1. Local cache (SQLite) ────────────────────────
     final db = await DatabaseHelper.instance.database;
     await db.insert(
       'jobs',
       job.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    // ── 2. Remote (Firestore) ──────────────────────────
+    await FirestoreService().addJob(job);
   }
 
   /// Updates an existing job. Only the original poster (company) may do this.
@@ -96,6 +100,7 @@ class JobsRepository {
       where: 'id = ? AND posted_by_id = ?',
       whereArgs: [job.id, poster.id],
     );
+    await FirestoreService().updateJob(job);
   }
 
   /// Deletes a job. Only the original poster (company) may do this.
@@ -109,6 +114,7 @@ class JobsRepository {
       where: 'id = ? AND posted_by_id = ?',
       whereArgs: [jobId, poster.id],
     );
+    await FirestoreService().deleteJob(jobId);
   }
 
   // ── SEED ───────────────────────────────────────────────

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../providers/amenities_provider.dart';
 import '../widgets/category_filter_bar.dart';
 import '../widgets/amenity_list_view.dart';
 import '../widgets/amenity_map_view.dart';

@@ -28,7 +28,12 @@ class NewsSectionPreview extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('City News', style: AppTypography.headlineSmall),
+              Text('City News',
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  )),
               GestureDetector(
                 onTap: () => context.push('/news'),
                 child: Text('See all',
