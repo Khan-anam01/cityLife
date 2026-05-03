@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../core/database/database_helper.dart';
+import '../../../core/services/firestore_service.dart';
 import '../models/event_model.dart';
 
 class EventsRepository {
@@ -62,13 +63,32 @@ class EventsRepository {
     return EventModel.fromMap(results.first);
   }
 
+  Future<List<EventModel>> getByOrganizerId(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    final results = await db.query(
+      _table,
+      where: 'organizer_id = ?',
+      whereArgs: [userId],
+      orderBy: 'start_date DESC',
+    );
+    return results.map((m) => EventModel.fromMap(m)).toList();
+  }
+
+  Future<void> delete(String id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete(_table, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<void> insert(EventModel event) async {
+    // ── 1. Local cache (SQLite) ────────────────────────
     final db = await DatabaseHelper.instance.database;
     await db.insert(
       _table,
       event.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    // ── 2. Remote (Firestore) ──────────────────────────
+    await FirestoreService().addEvent(event);
   }
 
   Future<void> seedEvents() async {

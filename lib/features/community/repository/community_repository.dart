@@ -12,6 +12,26 @@ class CommunityRepository {
   bool _seeded = false;
 
   // ── POSTS ──────────────────────────────────────────────
+
+  /// Stream wrapper around [getPosts] for use with StreamProvider.
+  /// Re-emits whenever [refresh] is called on the controller.
+  Stream<List<PostModel>> postsStream({
+    String? county,
+    String? constituency,
+    String? groupId,
+  }) async* {
+    yield await getPosts(
+      county: county,
+      constituency: constituency,
+      groupId: groupId,
+    );
+  }
+
+  /// Stream of comments for a given post.
+  Stream<List<CommentModel>> commentsStream(String postId) async* {
+    yield await getComments(postId);
+  }
+
   Future<List<PostModel>> getPosts({
     String? county,
     String? constituency,
@@ -117,6 +137,15 @@ class CommunityRepository {
     await db.rawUpdate(
       'UPDATE posts SET comments_count = comments_count + 1 WHERE id = ?',
       [comment.postId],
+    );
+  }
+
+  Future<void> deleteComment(String postId, String commentId) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete('comments', where: 'id = ?', whereArgs: [commentId]);
+    await db.rawUpdate(
+      'UPDATE posts SET comments_count = MAX(0, comments_count - 1) WHERE id = ?',
+      [postId],
     );
   }
 

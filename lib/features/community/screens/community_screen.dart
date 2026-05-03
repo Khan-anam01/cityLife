@@ -375,7 +375,6 @@ class _CountyPicker extends ConsumerWidget {
                     : null,
                 onTap: () {
                   ref.read(selectedCountyProvider.notifier).state = county;
-                  ref.read(postsProvider.notifier).loadPosts();
                   Navigator.pop(context);
                 },
               );
