@@ -3,6 +3,8 @@ class PostModel {
   final String userId;
   final String? userName;
   final String? userInitials;
+  final String? userPhotoUrl;
+  final String userRole; // 'user' | 'company' | 'admin'
   final String content;
   final String? imageUrl;
   final int likes;
@@ -21,6 +23,8 @@ class PostModel {
     required this.userId,
     this.userName,
     this.userInitials,
+    this.userPhotoUrl,
+    this.userRole = 'user',
     required this.content,
     this.imageUrl,
     this.likes = 0,
@@ -35,6 +39,8 @@ class PostModel {
     required this.updatedAt,
   });
 
+  bool get isCompany => userRole == 'company';
+
   String get timeAgo {
     final diff = DateTime.now().difference(createdAt);
     if (diff.inSeconds < 60) return '${diff.inSeconds}s';
@@ -44,12 +50,59 @@ class PostModel {
     return '${(diff.inDays / 7).floor()}w';
   }
 
+  // ── Realtime Database ──────────────────────────────────
+  /// Converts to a map suitable for Firebase Realtime Database.
+  Map<String, dynamic> toRealtimeDb() => {
+        'id': id,
+        'user_id': userId,
+        'user_name': userName,
+        'user_initials': userInitials,
+        'user_photo_url': userPhotoUrl,
+        'user_role': userRole,
+        'content': content,
+        'image_url': imageUrl,
+        'likes': likes,
+        'comments_count': commentsCount,
+        'reposts': reposts,
+        'county': county,
+        'constituency': constituency,
+        'group_id': groupId,
+        'created_at': createdAt.millisecondsSinceEpoch,
+        'updated_at': updatedAt.millisecondsSinceEpoch,
+      };
+
+  factory PostModel.fromRealtimeDb(Map<dynamic, dynamic> map, String id) {
+    return PostModel(
+      id: id,
+      userId: map['user_id'] as String,
+      userName: map['user_name'] as String?,
+      userInitials: map['user_initials'] as String?,
+      userPhotoUrl: map['user_photo_url'] as String?,
+      userRole: map['user_role'] as String? ?? 'user',
+      content: map['content'] as String,
+      imageUrl: map['image_url'] as String?,
+      likes: map['likes'] as int? ?? 0,
+      commentsCount: map['comments_count'] as int? ?? 0,
+      reposts: map['reposts'] as int? ?? 0,
+      county: map['county'] as String?,
+      constituency: map['constituency'] as String?,
+      groupId: map['group_id'] as String?,
+      createdAt:
+          DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int? ?? 0),
+      updatedAt:
+          DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int? ?? 0),
+    );
+  }
+
+  // ── SQLite (local cache) ───────────────────────────────
   factory PostModel.fromMap(Map<String, dynamic> map) {
     return PostModel(
       id: map['id'] as String,
       userId: map['user_id'] as String,
       userName: map['user_name'] as String?,
       userInitials: map['user_initials'] as String?,
+      userPhotoUrl: map['user_photo_url'] as String?,
+      userRole: map['user_role'] as String? ?? 'user',
       content: map['content'] as String,
       imageUrl: map['image_url'] as String?,
       likes: map['likes'] as int? ?? 0,
@@ -70,6 +123,8 @@ class PostModel {
         'user_id': userId,
         'user_name': userName,
         'user_initials': userInitials,
+        'user_photo_url': userPhotoUrl,
+        'user_role': userRole,
         'content': content,
         'image_url': imageUrl,
         'likes': likes,
@@ -96,6 +151,8 @@ class PostModel {
       userId: userId,
       userName: userName,
       userInitials: userInitials,
+      userPhotoUrl: userPhotoUrl,
+      userRole: userRole,
       content: content,
       imageUrl: imageUrl,
       likes: likes ?? this.likes,

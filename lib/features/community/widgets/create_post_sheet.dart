@@ -42,7 +42,7 @@ class _CreatePostSheetState extends ConsumerState<CreatePostSheet> {
       updatedAt: DateTime.now(),
     );
 
-    await ref.read(postsProvider.notifier).createPost(post);
+    await ref.read(postActionsProvider.notifier).createPost(post);
     setState(() => _isPosting = false);
     if (mounted) Navigator.pop(context);
   }

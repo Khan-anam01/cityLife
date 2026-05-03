@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../repository/auth_repository.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../shared/models/user_model.dart';
 
 // ── Auth State ─────────────────────────────────────────
@@ -40,32 +41,61 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   final _repo = AuthRepository.instance;
+  final _firestore = FirestoreService();
+
+  // Prevents the Firebase auth stream (_init) from overwriting the state
+  // that login() / register() is in the middle of setting. Without this flag,
+  // Firebase fires authStateChanges BEFORE login() has finished writing to
+  // Firestore/SQLite. _init() then hits the fallback (role: UserRole.user),
+  // races with the correct state from login(), and causes a redirect loop
+  // back to the login screen for regular 'user' role accounts.
+  bool _authOperationInProgress = false;
 
   void _init() {
     _repo.authStateChanges.listen((User? firebaseUser) async {
+      // Skip stream events while login() or register() is actively running.
+      // Those methods manage state themselves and will set the final
+      // authenticated state with the correct role when complete.
+      if (_authOperationInProgress) return;
+
       if (firebaseUser != null) {
+        // 1. Try local cache first (handles normal app restarts)
         final cached = await _repo.getCachedUser(firebaseUser.uid);
         if (cached != null) {
           state = state.copyWith(
             status: AuthStatus.authenticated,
             user: cached,
           );
-        } else {
-          // User exists in Firebase but not cached — build from Firebase
-          final user = UserModel(
-            id: firebaseUser.uid,
-            email: firebaseUser.email!,
-            displayName: firebaseUser.displayName,
-            photoUrl: firebaseUser.photoURL,
-            isVerified: firebaseUser.emailVerified,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
+          return;
+        }
+
+        // 2. Cache miss — fetch full profile (including role) from Firestore.
+        // Handles fresh installs or cleared app storage.
+        final firestoreUser = await _firestore.getUser(firebaseUser.uid);
+        if (firestoreUser != null) {
           state = state.copyWith(
             status: AuthStatus.authenticated,
-            user: user,
+            user: firestoreUser,
           );
+          return;
         }
+
+        // 3. Absolute fallback — user in Auth but not in Firestore.
+        // Only happens for accounts created before this integration.
+        final fallback = UserModel(
+          id: firebaseUser.uid,
+          email: firebaseUser.email!,
+          displayName: firebaseUser.displayName,
+          photoUrl: firebaseUser.photoURL,
+          role: UserRole.user,
+          isVerified: firebaseUser.emailVerified,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: fallback,
+        );
       } else {
         state = state.copyWith(
           status: AuthStatus.unauthenticated,
@@ -81,6 +111,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String displayName,
     UserRole role = UserRole.user,
   }) async {
+    _authOperationInProgress = true;
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
       final user = await _repo.register(
@@ -98,6 +129,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.error,
         error: e.toString(),
       );
+    } finally {
+      _authOperationInProgress = false;
     }
   }
 
@@ -105,6 +138,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String email,
     required String password,
   }) async {
+    _authOperationInProgress = true;
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
       final user = await _repo.login(email: email, password: password);
@@ -117,6 +151,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.error,
         error: e.toString(),
       );
+    } finally {
+      // Always clear the flag — even on error — so the stream
+      // resumes normal operation (e.g. for sign out events).
+      _authOperationInProgress = false;
     }
   }
 

@@ -320,6 +320,17 @@ class AppDrawer extends ConsumerWidget {
                       context.push('/my-reports');
                     },
                   ),
+                  // ── Post a Job (company only) ────────
+                  if (user?.role.name == 'company')
+                    _DrawerItem(
+                      icon: Icons.post_add_rounded,
+                      label: 'Post a Job',
+                      badge: 'Biz',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push('/post-job');
+                      },
+                    ),
                   _DrawerItem(
                     icon: Icons.cloud_upload_rounded,
                     label: 'Seed Demo Data',
@@ -331,7 +342,10 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerItem(
                     icon: Icons.event_outlined,
                     label: 'My Events',
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/my-events');
+                    },
                   ),
                   _DrawerItem(
                     icon: Icons.newspaper_rounded,

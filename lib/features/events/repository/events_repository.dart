@@ -62,6 +62,22 @@ class EventsRepository {
     return EventModel.fromMap(results.first);
   }
 
+  Future<List<EventModel>> getByOrganizerId(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    final results = await db.query(
+      _table,
+      where: 'organizer_id = ?',
+      whereArgs: [userId],
+      orderBy: 'start_date DESC',
+    );
+    return results.map((m) => EventModel.fromMap(m)).toList();
+  }
+
+  Future<void> delete(String id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete(_table, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<void> insert(EventModel event) async {
     final db = await DatabaseHelper.instance.database;
     await db.insert(

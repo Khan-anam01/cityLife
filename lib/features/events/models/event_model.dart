@@ -16,6 +16,11 @@ class EventModel {
   final double price;
   final bool isFree;
   final int attendees;
+
+  // ── Organizer identity ────────────────────────────────
+  final String? organizerId; // Firebase UID of the user who created the event
+  final String? organizerRole; // 'user' | 'company' — both can create events
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,11 +40,13 @@ class EventModel {
     this.price = 0,
     this.isFree = true,
     this.attendees = 0,
+    this.organizerId,
+    this.organizerRole,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  // ── Computed Properties ─────────────────────────────────────
+  // ── Computed ───────────────────────────────────────────
   bool get isUpcoming => startDate.isAfter(DateTime.now());
 
   bool get isToday {
@@ -48,6 +55,8 @@ class EventModel {
         startDate.month == now.month &&
         startDate.day == now.day;
   }
+
+  bool get isPostedByCompany => organizerRole == 'company';
 
   String get formattedDate {
     const months = [
@@ -81,7 +90,7 @@ class EventModel {
 
   String get priceLabel => isFree ? 'Free' : 'KES ${price.toStringAsFixed(0)}';
 
-  // ── SQLite Support (Existing) ───────────────────────────────
+  // ── SQLite ─────────────────────────────────────────────
   factory EventModel.fromMap(Map<String, dynamic> map) {
     return EventModel(
       id: map['id'] as String,
@@ -101,6 +110,8 @@ class EventModel {
       price: (map['price'] as num?)?.toDouble() ?? 0,
       isFree: (map['is_free'] as int? ?? 1) == 1,
       attendees: map['attendees'] as int? ?? 0,
+      organizerId: map['organizer_id'] as String?,
+      organizerRole: map['organizer_role'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
@@ -122,14 +133,15 @@ class EventModel {
         'price': price,
         'is_free': isFree ? 1 : 0,
         'attendees': attendees,
+        'organizer_id': organizerId,
+        'organizer_role': organizerRole,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
 
-  // ── Firestore Support ───────────────────────────────────────
+  // ── Firestore ──────────────────────────────────────────
   factory EventModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-
     return EventModel(
       id: doc.id,
       title: data['title'] as String? ?? '',
@@ -146,33 +158,34 @@ class EventModel {
       price: (data['price'] as num?)?.toDouble() ?? 0,
       isFree: data['is_free'] as bool? ?? true,
       attendees: data['attendees'] as int? ?? 0,
+      organizerId: data['organizer_id'] as String?,
+      organizerRole: data['organizer_role'] as String?,
       createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'title': title,
-      'description': description,
-      'venue': venue,
-      'latitude': latitude,
-      'longitude': longitude,
-      'start_date': Timestamp.fromDate(startDate),
-      'end_date': endDate != null ? Timestamp.fromDate(endDate!) : null,
-      'category': category,
-      'image_url': imageUrl,
-      'organizer': organizer,
-      'capacity': capacity,
-      'price': price,
-      'is_free': isFree,
-      'attendees': attendees,
-      'created_at': Timestamp.fromDate(createdAt),
-      'updated_at': Timestamp.fromDate(updatedAt),
-    };
-  }
+  Map<String, dynamic> toFirestore() => {
+        'title': title,
+        'description': description,
+        'venue': venue,
+        'latitude': latitude,
+        'longitude': longitude,
+        'start_date': Timestamp.fromDate(startDate),
+        'end_date': endDate != null ? Timestamp.fromDate(endDate!) : null,
+        'category': category,
+        'image_url': imageUrl,
+        'organizer': organizer,
+        'capacity': capacity,
+        'price': price,
+        'is_free': isFree,
+        'attendees': attendees,
+        'organizer_id': organizerId,
+        'organizer_role': organizerRole,
+        'created_at': Timestamp.fromDate(createdAt),
+        'updated_at': Timestamp.fromDate(updatedAt),
+      };
 
-  // ── CopyWith ────────────────────────────────────────────────
   EventModel copyWith({
     String? id,
     String? title,
@@ -189,6 +202,8 @@ class EventModel {
     double? price,
     bool? isFree,
     int? attendees,
+    String? organizerId,
+    String? organizerRole,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -208,6 +223,8 @@ class EventModel {
       price: price ?? this.price,
       isFree: isFree ?? this.isFree,
       attendees: attendees ?? this.attendees,
+      organizerId: organizerId ?? this.organizerId,
+      organizerRole: organizerRole ?? this.organizerRole,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

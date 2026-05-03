@@ -190,15 +190,9 @@ class PostCard extends ConsumerWidget {
                         count: post.likes,
                         color: post.isLiked ? AppColors.coral : textSecondary,
                         onTap: () {
-                          if (useFollowingFeed) {
-                            ref
-                                .read(followingPostsProvider.notifier)
-                                .toggleLike(post.id, post.isLiked);
-                          } else {
-                            ref
-                                .read(postsProvider.notifier)
-                                .toggleLike(post.id, post.isLiked);
-                          }
+                          ref
+                              .read(postActionsProvider.notifier)
+                              .toggleLike(post.id, post.isLiked);
                         },
                       ),
                       const Spacer(),
@@ -268,7 +262,7 @@ class PostCard extends ConsumerWidget {
                 style: TextStyle(color: AppColors.error)),
             onTap: () {
               Navigator.pop(context);
-              ref.read(postsProvider.notifier).deletePost(post.id);
+              ref.read(postActionsProvider.notifier).deletePost(post.id);
             },
           ),
           const SizedBox(height: AppSpacing.base),

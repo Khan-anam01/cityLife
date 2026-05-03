@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../providers/community_provider.dart';
-import '../repository/community_repository.dart';
 import 'post_card.dart';
 
 class FeedTab extends ConsumerStatefulWidget {
@@ -37,9 +36,7 @@ class _FeedTabState extends ConsumerState<FeedTab>
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final constituency = ref.watch(selectedConstituencyProvider);
     final constituencies = ref.watch(constituenciesProvider);
@@ -109,7 +106,8 @@ class _ForYouFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final postsState = ref.watch(postsProvider);
+    // StreamProvider — live updates from Realtime DB
+    final postsState = ref.watch(postsStreamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return postsState.when(
@@ -117,7 +115,7 @@ class _ForYouFeed extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.accent),
       ),
       error: (e, _) => _FeedError(
-        onRetry: () => ref.read(postsProvider.notifier).loadPosts(),
+        onRetry: () => ref.invalidate(postsStreamProvider),
       ),
       data: (posts) {
         if (posts.isEmpty) {
@@ -128,7 +126,8 @@ class _ForYouFeed extends ConsumerWidget {
         }
         return RefreshIndicator(
           color: AppColors.accent,
-          onRefresh: () => ref.read(postsProvider.notifier).loadPosts(),
+          // Streams don't need manual refresh — swipe just invalidates
+          onRefresh: () async => ref.invalidate(postsStreamProvider),
           child: ListView.separated(
             padding: const EdgeInsets.only(bottom: AppSpacing.massive),
             itemCount: posts.length,
@@ -158,7 +157,7 @@ class _FollowingFeed extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.accent),
       ),
       error: (e, _) => _FeedError(
-        onRetry: () => ref.read(followingPostsProvider.notifier).load(),
+        onRetry: () => ref.invalidate(followingPostsProvider),
       ),
       data: (posts) {
         if (posts.isEmpty) {
@@ -170,7 +169,7 @@ class _FollowingFeed extends ConsumerWidget {
         }
         return RefreshIndicator(
           color: AppColors.accent,
-          onRefresh: () => ref.read(followingPostsProvider.notifier).load(),
+          onRefresh: () async => ref.invalidate(followingPostsProvider),
           child: ListView.separated(
             padding: const EdgeInsets.only(bottom: AppSpacing.massive),
             itemCount: posts.length,
@@ -223,8 +222,6 @@ class _ConstituencyFeed extends ConsumerWidget {
       );
     }
 
-    // Re-use the postsProvider but filtered — we load with constituency arg
-    // We use a local FutureProvider here to avoid polluting the global state
     return _ConstituencyPostList(constituency: constituency);
   }
 }
@@ -237,10 +234,8 @@ class _ConstituencyPostList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Scoped future that re-runs when constituency changes
-    final postsAsync = ref.watch(
-      _constituencyPostsProvider(constituency),
-    );
+    // Uses the StreamProvider.family from community_provider
+    final postsAsync = ref.watch(constituencyPostsProvider(constituency));
 
     return postsAsync.when(
       loading: () => const Center(
@@ -257,7 +252,7 @@ class _ConstituencyPostList extends ConsumerWidget {
         return RefreshIndicator(
           color: AppColors.accent,
           onRefresh: () async =>
-              ref.refresh(_constituencyPostsProvider(constituency)),
+              ref.invalidate(constituencyPostsProvider(constituency)),
           child: ListView.separated(
             padding: const EdgeInsets.only(bottom: AppSpacing.massive),
             itemCount: posts.length,
@@ -272,12 +267,6 @@ class _ConstituencyPostList extends ConsumerWidget {
     );
   }
 }
-
-final _constituencyPostsProvider =
-    FutureProvider.family((ref, String constituency) async {
-  await CommunityRepository.instance.createTables();
-  return CommunityRepository.instance.getPosts(constituency: constituency);
-});
 
 // ── Constituency picker bar ────────────────────────────
 class _ConstituencyBar extends ConsumerWidget {

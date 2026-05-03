@@ -51,7 +51,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final commentsState = ref.watch(commentsProvider(widget.post.id));
+    final commentsState = ref.watch(commentsStreamProvider(widget.post.id));
     final textPrimary =
         isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
     final textSecondary =

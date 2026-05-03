@@ -27,6 +27,7 @@ dependencies:
   cloud_firestore: ^5.4.0
   firebase_storage: ^12.3.0  
   google_sign_in: ^6.2.1
+  firebase_database: ^11.3.10
 
   # ── Maps ─────────────────────────────────────────
   google_maps_flutter: ^2.7.0

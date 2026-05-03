@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 enum UserRole { user, company, admin }
@@ -62,6 +63,42 @@ class UserModel {
     );
   }
 
+  // ── Firestore ──────────────────────────────────────────
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'email': email,
+      'display_name': displayName,
+      'photo_url': photoUrl,
+      'role': role.name,
+      'phone': phone,
+      'bio': bio,
+      'is_verified': isVerified,
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>;
+    return UserModel(
+      id: doc.id,
+      email: map['email'] as String,
+      displayName: map['display_name'] as String?,
+      photoUrl: map['photo_url'] as String?,
+      role: UserRole.values.firstWhere(
+        (r) => r.name == (map['role'] as String? ?? 'user'),
+        orElse: () => UserRole.user,
+      ),
+      phone: map['phone'] as String?,
+      bio: map['bio'] as String?,
+      isVerified: map['is_verified'] as bool? ?? false,
+      createdAt: (map['created_at'] as Timestamp).toDate(),
+      updatedAt: (map['updated_at'] as Timestamp).toDate(),
+    );
+  }
+
+  // ── SQLite ─────────────────────────────────────────────
   Map<String, dynamic> toMap() {
     return {
       'id': id,

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../core/database/database_helper.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../shared/models/user_model.dart';
 
 class AuthRepository {
@@ -8,6 +9,7 @@ class AuthRepository {
   static final AuthRepository instance = AuthRepository._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestore = FirestoreService();
 
   // ── Current Firebase User Stream ───────────────────────
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -39,6 +41,8 @@ class AuthRepository {
         updatedAt: DateTime.now(),
       );
 
+      // Persist to Firestore (source of truth) and SQLite (local cache)
+      await _firestore.createUser(user);
       await _cacheUser(user);
       return user;
     } on FirebaseAuthException catch (e) {
@@ -47,6 +51,11 @@ class AuthRepository {
   }
 
   // ── Login ──────────────────────────────────────────────
+  // FIX: Role is not stored in Firebase Auth — it must be read from
+  // Firestore (source of truth) or the local SQLite cache. The old
+  // implementation always built a UserModel with the default role
+  // (UserRole.user), which caused regular users and company users to
+  // both appear as 'user' after login, breaking role-based routing.
   Future<UserModel> login({
     required String email,
     required String password,
@@ -57,18 +66,63 @@ class AuthRepository {
         password: password,
       );
 
-      final user = UserModel(
-        id: credential.user!.uid,
+      final uid = credential.user!.uid;
+
+      // 1. Try local SQLite cache first (fast, no network round-trip)
+      final cached = await getCachedUser(uid);
+      if (cached != null) {
+        // Refresh mutable Firebase Auth fields (email verified status, photo)
+        // but keep the role from the trusted cache.
+        final refreshed = UserModel(
+          id: cached.id,
+          email: credential.user!.email!,
+          displayName: credential.user!.displayName ?? cached.displayName,
+          photoUrl: credential.user!.photoURL ?? cached.photoUrl,
+          role: cached.role, // ← preserve stored role
+          phone: cached.phone,
+          bio: cached.bio,
+          isVerified: credential.user!.emailVerified,
+          createdAt: cached.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        await _cacheUser(refreshed);
+        return refreshed;
+      }
+
+      // 2. Cache miss (fresh install / cleared data) — fetch from Firestore
+      final firestoreUser = await _firestore.getUser(uid);
+      if (firestoreUser != null) {
+        final synced = UserModel(
+          id: firestoreUser.id,
+          email: credential.user!.email!,
+          displayName:
+              credential.user!.displayName ?? firestoreUser.displayName,
+          photoUrl: credential.user!.photoURL ?? firestoreUser.photoUrl,
+          role: firestoreUser.role, // ← role from Firestore
+          phone: firestoreUser.phone,
+          bio: firestoreUser.bio,
+          isVerified: credential.user!.emailVerified,
+          createdAt: firestoreUser.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        await _cacheUser(synced); // re-populate local cache
+        return synced;
+      }
+
+      // 3. Fallback — user exists in Firebase Auth but not in Firestore
+      // (e.g. accounts created before this integration). Default to 'user' role.
+      final fallback = UserModel(
+        id: uid,
         email: credential.user!.email!,
         displayName: credential.user!.displayName,
         photoUrl: credential.user!.photoURL,
+        role: UserRole.user,
         isVerified: credential.user!.emailVerified,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-
-      await _cacheUser(user);
-      return user;
+      await _cacheUser(fallback);
+      return fallback;
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseError(e);
     }

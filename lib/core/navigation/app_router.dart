@@ -21,6 +21,9 @@ import '../../features/jobs/screens/job_detail_screen.dart';
 import '../../features/jobs/models/job_model.dart';
 import '../../features/reporting/screens/report_issue_screen.dart';
 import '../../features/reporting/screens/my_reports_screen.dart';
+import '../../features/events/screens/my_events_screen.dart';
+import '../../features/jobs/screens/post_job_screen.dart';
+import '../../features/events/screens/create_event_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/news/screens/news_screen.dart';
@@ -36,14 +39,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.onboarding,
     debugLogDiagnostics: true,
     redirect: (context, state) {
+      final status = authState.status;
+
+      // Don't redirect while auth is still being determined
+      if (status == AuthStatus.initial || status == AuthStatus.loading) {
+        return null;
+      }
+
       final isAuthenticated = authState.isAuthenticated;
       final isOnAuth = state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register ||
           state.matchedLocation == AppRoutes.forgotPassword;
       final isOnOnboarding = state.matchedLocation == AppRoutes.onboarding;
+
       if (isAuthenticated && (isOnAuth || isOnOnboarding)) {
         return AppRoutes.home;
       }
+
       return null;
     },
     routes: [
@@ -93,6 +105,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           builder: (_, __) => const ReportIssueScreen()),
       GoRoute(path: '/my-reports', builder: (_, __) => const MyReportsScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/post-job', builder: (_, __) => const PostJobScreen()),
+      GoRoute(
+          path: '/create-event', builder: (_, __) => const CreateEventScreen()),
+      GoRoute(path: '/my-events', builder: (_, __) => const MyEventsScreen()),
       GoRoute(
           path: AppRoutes.editProfile,
           builder: (_, __) => const EditProfileScreen()),

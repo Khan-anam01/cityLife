@@ -8,7 +8,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _version = 3; // ← bumped to 3 to trigger migration
+  static const int _version = 4; // ← bumped to 4: jobs + events poster columns
   static const String _dbName = 'citylife.db';
 
   Future<Database> get database async {
@@ -116,6 +116,29 @@ class DatabaseHelper {
         'CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)',
       );
     }
+
+    if (oldVersion < 4) {
+      // Add poster-identity columns to jobs table
+      for (final sql in [
+        'ALTER TABLE jobs ADD COLUMN posted_by_id TEXT',
+        'ALTER TABLE jobs ADD COLUMN posted_by_name TEXT',
+        "ALTER TABLE jobs ADD COLUMN posted_by_role TEXT NOT NULL DEFAULT 'company'",
+      ]) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+
+      // Add organizer-identity columns to events table
+      for (final sql in [
+        'ALTER TABLE events ADD COLUMN organizer_id TEXT',
+        'ALTER TABLE events ADD COLUMN organizer_role TEXT',
+      ]) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> _createTables(Database db) async {
@@ -176,6 +199,8 @@ class DatabaseHelper {
         price           REAL DEFAULT 0,
         is_free         INTEGER DEFAULT 1,
         attendees       INTEGER DEFAULT 0,
+        organizer_id    TEXT,
+        organizer_role  TEXT,
         created_at      TEXT NOT NULL,
         updated_at      TEXT NOT NULL
       )
@@ -246,21 +271,24 @@ class DatabaseHelper {
     // ── Jobs ─────────────────────────────────────────────
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ${DBTables.jobs} (
-        id            TEXT PRIMARY KEY,
-        title         TEXT NOT NULL,
-        company       TEXT NOT NULL,
-        description   TEXT NOT NULL,
-        location      TEXT,
-        salary        TEXT,
-        type          TEXT,
-        category      TEXT,
-        skills        TEXT,
-        deadline      TEXT,
-        is_remote     INTEGER DEFAULT 0,
-        logo_url      TEXT,
-        apply_url     TEXT,
-        created_at    TEXT NOT NULL,
-        updated_at    TEXT NOT NULL
+        id             TEXT PRIMARY KEY,
+        title          TEXT NOT NULL,
+        company        TEXT NOT NULL,
+        description    TEXT NOT NULL,
+        location       TEXT,
+        salary         TEXT,
+        type           TEXT,
+        category       TEXT,
+        skills         TEXT,
+        deadline       TEXT,
+        is_remote      INTEGER DEFAULT 0,
+        logo_url       TEXT,
+        apply_url      TEXT,
+        posted_by_id   TEXT,
+        posted_by_name TEXT,
+        posted_by_role TEXT NOT NULL DEFAULT 'company',
+        created_at     TEXT NOT NULL,
+        updated_at     TEXT NOT NULL
       )
     ''');
 

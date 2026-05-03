@@ -5,13 +5,19 @@ class JobModel {
   final String description;
   final String? location;
   final String? salary;
-  final String? type; // full-time, part-time, contract, internship
+  final String? type; // full-time, part-time, contract, internship, freelance
   final String? category;
   final String? skills;
   final DateTime? deadline;
   final bool isRemote;
   final String? logoUrl;
   final String? applyUrl;
+
+  // ── Poster identity (company accounts only) ────────────
+  final String? postedById; // Firebase UID of the company user
+  final String? postedByName; // Company display name
+  final String postedByRole; // Always 'company' for valid job posts
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,6 +35,9 @@ class JobModel {
     this.isRemote = false,
     this.logoUrl,
     this.applyUrl,
+    this.postedById,
+    this.postedByName,
+    this.postedByRole = 'company',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -64,6 +73,7 @@ class JobModel {
     return 'Closes in $days days';
   }
 
+  // ── SQLite ─────────────────────────────────────────────
   factory JobModel.fromMap(Map<String, dynamic> map) {
     return JobModel(
       id: map['id'] as String,
@@ -81,6 +91,9 @@ class JobModel {
       isRemote: (map['is_remote'] as int? ?? 0) == 1,
       logoUrl: map['logo_url'] as String?,
       applyUrl: map['apply_url'] as String?,
+      postedById: map['posted_by_id'] as String?,
+      postedByName: map['posted_by_name'] as String?,
+      postedByRole: map['posted_by_role'] as String? ?? 'company',
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
@@ -100,6 +113,30 @@ class JobModel {
         'is_remote': isRemote ? 1 : 0,
         'logo_url': logoUrl,
         'apply_url': applyUrl,
+        'posted_by_id': postedById,
+        'posted_by_name': postedByName,
+        'posted_by_role': postedByRole,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+
+  // ── Firestore ──────────────────────────────────────────
+  Map<String, dynamic> toFirestore() => {
+        'title': title,
+        'company': company,
+        'description': description,
+        'location': location,
+        'salary': salary,
+        'type': type,
+        'category': category,
+        'skills': skills,
+        'deadline': deadline?.toIso8601String(),
+        'is_remote': isRemote,
+        'logo_url': logoUrl,
+        'apply_url': applyUrl,
+        'posted_by_id': postedById,
+        'posted_by_name': postedByName,
+        'posted_by_role': postedByRole,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };

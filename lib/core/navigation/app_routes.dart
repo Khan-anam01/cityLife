@@ -26,4 +26,7 @@ abstract class AppRoutes {
   static const String notifications = '/notifications';
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
+  static const String postJob = '/post-job';
+  static const String createEvent = '/create-event';
+  static const String myEvents = '/my-events';
 }
