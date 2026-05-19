@@ -189,38 +189,48 @@ final followingCountProvider =
 });
 
 // ── Follow / Unfollow action ───────────────────────────
-class FollowNotifier extends StateNotifier<bool> {
+class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
   final String currentUserId;
   final String targetUserId;
   final Ref _ref;
 
-  FollowNotifier(this.currentUserId, this.targetUserId, this._ref, bool initial)
-      : super(initial);
+  FollowNotifier(this.currentUserId, this.targetUserId, this._ref)
+      : super(const AsyncValue.loading()) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final following = await CommunityRepository.instance
+          .isFollowing(currentUserId, targetUserId);
+      if (mounted) state = AsyncValue.data(following);
+    } catch (e, s) {
+      if (mounted) state = AsyncValue.error(e, s);
+    }
+  }
 
   Future<void> toggle() async {
-    final wasFollowing = state;
-    state = !wasFollowing;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    // Optimistic update
+    state = AsyncValue.data(!current);
     try {
-      if (wasFollowing) {
+      if (current) {
         await CommunityRepository.instance
             .unfollow(currentUserId, targetUserId);
       } else {
         await CommunityRepository.instance.follow(currentUserId, targetUserId);
       }
-      // Invalidate follow-dependent providers
-      _ref.invalidate(followingPostsProvider);
+      // Refresh following feed
+      _ref.read(followingPostsProvider.notifier).load();
     } catch (_) {
-      state = wasFollowing; // revert on error
+      // Revert on error
+      state = AsyncValue.data(current);
     }
   }
 }
 
 final followNotifierProvider = StateNotifierProvider.family<FollowNotifier,
-    bool, ({String currentUserId, String targetUserId, bool initial})>(
-  (ref, args) => FollowNotifier(
-    args.currentUserId,
-    args.targetUserId,
-    ref,
-    args.initial,
-  ),
+    AsyncValue<bool>, ({String currentUserId, String targetUserId})>(
+  (ref, args) => FollowNotifier(args.currentUserId, args.targetUserId, ref),
 );

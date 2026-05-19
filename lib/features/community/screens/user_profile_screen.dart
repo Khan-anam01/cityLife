@@ -5,6 +5,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../../features/events/models/event_model.dart';
+import '../../../features/events/repository/events_repository.dart';
 import '../models/post_model.dart';
 import '../providers/community_provider.dart';
 import '../repository/community_repository.dart';
@@ -21,6 +23,12 @@ final userPostsProvider =
 final userInfoProvider =
     FutureProvider.family<Map<String, dynamic>?, String>((ref, userId) async {
   return CommunityRepository.instance.getUserInfo(userId);
+});
+
+// ── Provider for a specific user's events ─────────────
+final userEventsProvider =
+    FutureProvider.family<List<EventModel>, String>((ref, userId) async {
+  return EventsRepository.instance.getByOrganizerId(userId);
 });
 
 class UserProfileScreen extends ConsumerStatefulWidget {
@@ -46,7 +54,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -297,6 +305,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 labelStyle: AppTypography.labelMedium.copyWith(fontSize: 13),
                 tabs: const [
                   Tab(text: 'Posts'),
+                  Tab(text: 'Events'),
                   Tab(text: 'Messages'),
                 ],
               ),
@@ -342,6 +351,14 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   itemBuilder: (context, i) => PostCard(post: posts[i]),
                 );
               },
+            ),
+
+            // ── Events tab ─────────────────────────────
+            _UserEventsTab(
+              userId: widget.userId,
+              isDark: isDark,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
             ),
 
             // ── Messages tab ───────────────────────────
@@ -432,7 +449,250 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-// ── Messages tab — all public posts that acted as messages ────
+// ── Events tab ─────────────────────────────────────────
+class _UserEventsTab extends ConsumerWidget {
+  final String userId;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+
+  const _UserEventsTab({
+    required this.userId,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+  });
+
+  String _categoryEmoji(String? cat) {
+    const map = {
+      'Music': '🎵',
+      'Technology': '💻',
+      'Sports': '🏃',
+      'Food': '🍽️',
+      'Arts': '🎨',
+      'Business': '💼',
+      'Community': '🤝',
+      'Education': '📚',
+    };
+    return map[cat] ?? '🗓️';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(userEventsProvider(userId));
+
+    return eventsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      ),
+      error: (_, __) => Center(
+        child: Text('Could not load events',
+            style: AppTypography.bodyMedium.copyWith(color: textPrimary)),
+      ),
+      data: (events) {
+        if (events.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🗓️', style: TextStyle(fontSize: 40)),
+                const SizedBox(height: AppSpacing.md),
+                Text('No events yet',
+                    style: AppTypography.headlineSmall
+                        .copyWith(color: textPrimary)),
+                const SizedBox(height: AppSpacing.xs),
+                Text('Events organised by this user will appear here',
+                    textAlign: TextAlign.center,
+                    style:
+                        AppTypography.bodySmall.copyWith(color: textSecondary)),
+              ],
+            ),
+          );
+        }
+
+        final now = DateTime.now();
+        final upcoming = events.where((e) => e.startDate.isAfter(now)).toList();
+        final past = events.where((e) => !e.startDate.isAfter(now)).toList();
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          children: [
+            if (upcoming.isNotEmpty) ...[
+              _EventSectionHeader(
+                  label: 'Upcoming', count: upcoming.length, isDark: isDark),
+              ...upcoming.map((e) => _EventTile(
+                    event: e,
+                    isDark: isDark,
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    emoji: _categoryEmoji(e.category),
+                  )),
+            ],
+            if (past.isNotEmpty) ...[
+              _EventSectionHeader(
+                  label: 'Past',
+                  count: past.length,
+                  isDark: isDark,
+                  muted: true),
+              ...past.map((e) => Opacity(
+                    opacity: 0.6,
+                    child: _EventTile(
+                      event: e,
+                      isDark: isDark,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
+                      emoji: _categoryEmoji(e.category),
+                    ),
+                  )),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EventSectionHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isDark;
+  final bool muted;
+
+  const _EventSectionHeader({
+    required this.label,
+    required this.count,
+    required this.isDark,
+    this.muted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = muted
+        ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
+        : AppColors.amber;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding, AppSpacing.md, AppSpacing.screenPadding, 6),
+      child: Row(
+        children: [
+          Text(label,
+              style: AppTypography.labelMedium.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.textPrimary)),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('$count',
+                style: AppTypography.caption.copyWith(color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventTile extends StatelessWidget {
+  final EventModel event;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final String emoji;
+
+  const _EventTile({
+    required this.event,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.emoji,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.screenPadding, vertical: 4),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
+      child: Row(
+        children: [
+          // Emoji badge
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.amber.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 22))),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(event.title,
+                    style: AppTypography.bodyMedium.copyWith(
+                        color: textPrimary, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                Row(children: [
+                  Icon(Icons.calendar_today_outlined,
+                      size: 11, color: AppColors.textTertiary),
+                  const SizedBox(width: 3),
+                  Text(event.formattedDate,
+                      style:
+                          AppTypography.caption.copyWith(color: textSecondary)),
+                ]),
+                const SizedBox(height: 2),
+                Row(children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 11, color: AppColors.textTertiary),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(event.venue,
+                        style: AppTypography.caption
+                            .copyWith(color: textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+          // Free / paid badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: event.isFree
+                  ? AppColors.success.withOpacity(0.1)
+                  : AppColors.amber.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              event.priceLabel,
+              style: AppTypography.caption.copyWith(
+                  color: event.isFree ? AppColors.success : AppColors.amber),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Messages tab ────────────────────────────────────────
 class _UserMessagesTab extends ConsumerWidget {
   final String userId;
   final String userName;
